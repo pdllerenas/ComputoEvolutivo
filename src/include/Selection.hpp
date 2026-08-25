@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <iostream>
 #include <cstdint>
 #include <random>
 #include <stdexcept>
@@ -27,12 +28,17 @@ FindWinners(const std::vector<std::vector<Individual>> &groups) {
   std::vector<Individual> winners;
   winners.reserve(n);
   for (const auto &group : groups) {
+		std::cout << "===\n";
+		for (auto &ind : group)  {
+		std::cout << "| " << ind.genes[0] << ", " << ind.fitness << std::endl;
+		}
+		std::cout << "===\n";
     winners.push_back(*std::max_element(group.begin(), group.end()));
   }
   return winners;
 }
 
-std::vector<Individual> Tournament(const std::vector<Individual> &population,
+inline std::vector<Individual> Tournament(const std::vector<Individual> &population,
                                    uint16_t match_size = 2,
                                    uint16_t rounds = 1) {
   if (match_size > population.size()) {
@@ -41,6 +47,7 @@ std::vector<Individual> Tournament(const std::vector<Individual> &population,
 
   std::vector<Individual> winners(population);
   for (int round = 0; round < rounds; ++round) {
+		std::cout << "Round " <<  round + 1 << std::endl;
     std::vector<std::vector<Individual>> groups =
         FormGroups(winners, match_size);
     winners = FindWinners(groups);
