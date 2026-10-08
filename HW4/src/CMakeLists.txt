@@ -1,1 +1,1 @@
-add_executable(main main.cpp Generator.cpp Stats.cpp MIMIC.cpp ChowLiu.cpp)
+add_executable(main main.cpp Generator.cpp Stats.cpp Selection.cpp ChowLiu.cpp)

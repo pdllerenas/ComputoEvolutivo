@@ -5,19 +5,21 @@
 /*
  * Computes the mean and variance of each dimension of population.
  */
-std::pair<std::vector<Mean>, std::vector<Variance>>
-ComputeMeanAndVariance(const Population &population) {
+void ComputeMeanVarianceCorrelations(const Population &population, std::vector<double> &means,
+                       std::vector<double> &variances,
+                       std::vector<std::vector<double>> &correlations) {
   size_t d = population.gene_size;
-  size_t n = population.num_individuals;
+	size_t n = population.num_individuals;
 
-  std::vector<Mean> means(d, 0.0);
-  std::vector<Variance> variances(d, 0.0);
-  std::vector<std::vector<double>> correlations(d, std::vector<double>(d, 0.0));
-  std::vector<double> M2(d, 0.0);
-
-  std::vector<std::vector<double>> C(d, std::vector<double>(d, 0.0));
+  means.assign(d, 0.0);
+ 	variances.assign(d, 0.0);
   correlations.assign(d, std::vector<double>(d, 0.0));
 
+  std::vector<double> M2(d, 0.0);
+	// co-moments
+  std::vector<std::vector<double>> C(d, std::vector<double>(d, 0.0));
+
+	// buffers for Welford update
   std::vector<double> delta(d, 0.0);
   std::vector<double> delta2(d, 0.0);
 
@@ -38,7 +40,7 @@ ComputeMeanAndVariance(const Population &population) {
     for (size_t j = 0; j < d; ++j) {
       M2[j] += delta[j] * delta2[j];
 
-      for (size_t k = j + 1; j < d; ++k) {
+      for (size_t k = j + 1; k < d; ++k) {
         C[j][k] += delta[j] * delta2[k];
       }
     }
@@ -62,5 +64,4 @@ ComputeMeanAndVariance(const Population &population) {
       }
     }
   }
-  return std::make_pair(means, variances);
 }

@@ -5,4 +5,4 @@
 
 #include "Types.h"
 
-std::vector<double> SelectElite(const Population &population, size_t k);
+Population SelectElite(Population &population, size_t k);

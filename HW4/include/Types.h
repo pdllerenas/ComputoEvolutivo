@@ -1,8 +1,8 @@
 #pragma once
 
-#include <cmath>
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -27,8 +27,7 @@ struct DependencyNode {
 
 constexpr size_t DATABASE_SIZE = 1000;
 
-template <typename T>
-struct DisjointSets {
+template <typename T> struct DisjointSets {
   std::vector<T> parent, rnk;
   int n;
 
@@ -117,6 +116,11 @@ struct Graph {
                 << "]\n";
     }
   }
+};
+
+struct DirectedTree {
+  std::vector<DependencyNode> nodes;
+  std::vector<uint16_t> eval_order;
 };
 
 class Objective {
@@ -217,7 +221,9 @@ public:
   ~Sphere() = default;
 };
 
-using Mean = double;
-using Variance = double;
-using Pearson = double;
-
+struct EDAResult {
+	std::vector<double> best_gene;
+	double best_fitness;
+	size_t generations_used;
+	bool converged;
+};
