@@ -44,8 +44,8 @@ void GenerateChowLiuPopulation(
   population.all_fitnesses.reserve(n);
   population.all_genes.reserve(d * n);
 
-	population.num_individuals = n;
-	population.gene_size = d;
+  population.num_individuals = n;
+  population.gene_size = d;
 
   auto [lo, hi] = obj.bounds();
 

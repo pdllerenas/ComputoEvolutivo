@@ -6,7 +6,7 @@
 // #set text(fill: rgb("#e0e0e0"))
 
 #show: splendid-mdpi.template.with(
-  title: [Homework 4: EDA with MIMIC and Chow-Liu Tree with Normal Variables],
+  title: [Homework 4: EDA with MIMIC and Chow-Liu Tree using Normal Variables],
   authors: (
     (
       name: "Pedro Llerenas",
@@ -76,7 +76,7 @@ dependency chain (a simple Bayesian network) to represent the joint
 probability. It finds the optimal ordering $X_(pi(1)), X_(pi(2)), ...,
 X_(pi(n))$ by minimizing the Kullback-Leibler divergence between the true
 distribution of the elite solutions and the estimated chain distribution.
-Mathematically, this reduces to finding the chain that maximizes the mutual
+Mathematically, this is equivalent to finding the chain that maximizes the mutual
 information between adjacent variables.
 
 #figure(
@@ -98,8 +98,35 @@ information between adjacent variables.
   ],
 )
 
-In this document, we will focus on $theta = 100%$. That is, without any elitism.
-The algorithm then simplifies to the following.
+Since we will assume the variables come from a normal distribution, we can make furthen simplifications on
+the minimization problem. That is, we know that the covariance matrix
+#let Var = "Var"
+#let Cov = "Cov"
+$
+  Sigma = mat(Var(X_1), Cov(X_1, X_2); Cov(X_2, X_1), Var(X_2))
+$
+and that $rho = Cov(X_1, X_2)/(sigma_1 sigma_2)$, so $Cov(X_1,X_2) = rho sigma_1 sigma_2$, and we may write the covariance matrix as
+$
+  Sigma = mat(sigma_2^1, rho sigma_1 sigma_2; rho sigma_1 sigma_2, rho_2^2).
+$ 
+Since the conditional distribution of two normal variables is once again
+normal, the conditional variance becomes, using Schur's complement,
+$
+  Var(X_1|X_2=x_2) &= Sigma_(11) - Sigma_(12) Sigma_(22)^(-1) Sigma_(21)\
+  &= sigma_1^2 - (rho sigma_1 sigma_2) (1/(sigma_2^2))(rho sigma_1 sigma_2)\
+  &= sigma_1^2 (1 - rho^2)
+$
+Therefore, since the differential entropy of a normal variable is
+$
+  H(X) = 1/2 log (2 pi e sigma^2),
+$ 
+we have
+$
+H(X_i | X_p) &= 1/2 log (2 pi e sigma^2_(i|p))\
+&= 1/2 log (2 pi e sigma_i^2(1 - rho^2)).
+$ 
+Since $log$ is strictly increasing, it suffices to minimize $sigma_i^2
+(1-rho^2)$.
 
 #figure(
   kind: "algorithm",
@@ -154,76 +181,11 @@ we do not consider elitism. It was first presented in @ChowLiu.
 
 = Experiment Setup
 == Experiment 1
-We will use be using 6 binary random variables for which we have the following empirical data
-#figure(
-  table(
-    columns: 4,
-    align: center + horizon,
-    fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-    stroke: none,
-    table.hline(),
-    table.header([*Variable* ($X_i$)], [*Parent* ($X_(i-1)$)], [$P(X_i=1 | X_(i-1)=0)$], [$P(X_i=1 | X_(i-1)=1)$]),
-    table.hline(stroke: .5pt),
-    $x_1$, [None], [--], [0.20],
-    $x_2$, $x_1$, [0.92], [0.31],
-    $x_3$, $x_2$, [0.42], [0.15],
-    $x_4$, $x_3$, [0.28], [0.75],
-    $x_5$, $x_4$, [0.67], [0.43],
-    $x_6$, $x_5$, [0.35], [0.82],
-    table.hline(),
-  ),
-  caption: [Conditional probabilites for the first database DB1.],
-)
-
-#figure(
-  diagram(
-    node-stroke: .1em,
-    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
-    spacing: 4em,
-    node((0, 0), $x_1$, radius: 1.5em),
-    edge("-|>"),
-    node((1, 0), $x_2$, radius: 1.5em),
-    edge("-|>"),
-    node((2, 0), $x_3$, radius: 1.5em),
-    edge("-|>"),
-    node((3, 0), $x_4$, radius: 1.5em),
-    edge("-|>"),
-    node((4, 0), $x_5$, radius: 1.5em),
-    edge("-|>"),
-    node((5, 0), $x_6$, radius: 1.5em),
-  ),
-  caption: [Dependency chain from DB1. Its joint probability is given by $P(X) = P(X_1)product_(i = 2)^6 P(X_i|P_(i-1))$ ],
-)
-
-This data resembles a simple dependency chain, for which we expect MIMIC to
-perform well. Dependency tree should also perform well.
-
-== Experiment 2
-The next experiment also contains 6 binary random variables.
-#figure(
-  table(
-    columns: 4,
-    align: center + horizon,
-    fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-    stroke: none,
-    table.hline(),
-    table.header(
-      [*Variable* ($X_i$)], [*Parent* ($X_"parent"$)], [$P(X_i=1 | X_"parent"=0)$], [$P(X_i=1 | X_"parent"=1)$]
-    ),
-    table.hline(stroke: .5pt),
-    $x_1$, [None], [--], [0.20],
-    $x_2$, $x_1$, [0.92], [0.31],
-    $x_4$, $x_1$, [0.42], [0.15],
-    $x_5$, $x_2$, [0.28], [0.75],
-    $x_6$, $x_2$, [0.67], [0.43],
-    $x_3$, $x_6$, [0.35], [0.82],
-    table.hline(),
-  ),
-  caption: [Conditional probabilities for the second database DB2.],
-)
-In this case, $x_1$ contains 2 children, and so does $x_2$. We expect
-dependency tree to perform well, but MIMIC should not be able to reproduce the
-same dependency list (by design).
+We will use MIMIC to find the minimum of
+$
+  f(x) = sum_(i = 1)^d x_i^2
+$ 
+for $d = 10$. We will run the model 10 times, with a different seed per execution.
 
 #figure(
   diagram(

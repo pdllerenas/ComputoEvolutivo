@@ -1,1 +1,1 @@
-add_executable(test_generator test_generator.cpp ../src/Generator.cpp)
+add_executable(test_generator test_generator.cpp)

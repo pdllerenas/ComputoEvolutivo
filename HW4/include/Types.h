@@ -120,7 +120,7 @@ struct Graph {
 
 struct DirectedTree {
   std::vector<DependencyNode> nodes;
-  std::vector<uint16_t> eval_order;
+  std::vector<int> eval_order;
 };
 
 class Objective {
@@ -227,3 +227,4 @@ struct EDAResult {
 	size_t generations_used;
 	bool converged;
 };
+
