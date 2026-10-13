@@ -8,6 +8,13 @@
 #include "../include/Types.h"
 #include "../include/Utils.h"
 
+struct Population {
+  std::vector<double> all_genes;
+  std::vector<double> all_fitnesses;
+  size_t num_individuals = 0;
+  size_t gene_size = 0;
+};
+
 int main() {
   std::random_device rd;
   std::mt19937 rng(rd());

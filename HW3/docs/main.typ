@@ -38,7 +38,10 @@
     We explore three models for two databases. One model considers independent
     random variables, another one is a chain of dependencies, and the last one
     is a dependency tree. We calculate their maximum likelihood and their
-    pair-wise Kullback-Leibler divergence, where we observe...
+    pair-wise Kullback-Leibler divergence, where we observe that the dependency
+    tree model give a better fit to the generated databases. The chain of
+    dependencies follows in fitting, and lastly and independent nodes model,
+    which gives a poor representation of the joint probabilities in the model.
   ],
   details: none,
 )
@@ -466,9 +469,9 @@ The produced joint probability values are presented in the following tables.
 
 === KL-Divergence
 We obtained $D_("KL")(M_2 || "DB1") = 0.000453911$, and
-$D_("KL")(M_1 || "DB2") = 0.587202$.
+$D_("KL")(M_2 || "DB2") = 0.587202$.
 
-== Chow-Liu Tree
+== Chow-Liu Tree (Model 3)
 === Tree Generated
 #figure(
   diagram(
@@ -594,8 +597,8 @@ node 1. However, the joint probability stays the same.
 )
 
 === KL-Divergence
-We obtained $D_("KL")(M_2 || "DB1") = 0.000453911$, and
-$D_("KL")(M_1 || "DB2") = 0.000399334$.
+We obtained $D_("KL")(M_3 || "DB1") = 0.000453911$, and
+$D_("KL")(M_3 || "DB2") = 0.000399334$.
 
 = Conclusions
 We may conclude that Chow-Liu tree produces the best results for both databases in general. In particular, it does not suffer
