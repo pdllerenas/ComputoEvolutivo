@@ -5,6 +5,22 @@
 // #set page(fill: rgb("#1e1e1e"))
 // #set text(fill: rgb("#e0e0e0"))
 
+#let my_pagebreak(n_cols: 2, ) = [
+  #context[
+    // #let n_cols = page.columns  // I wrap thing inside a #columns function to allow breaking out as needed. page.columns does therefore not do the job for me.
+    #let width_page = page.width
+    #let width_col = width_page/n_cols
+    #let x_init = here().position().x
+    #let n_current_col = calc.ceil(x_init/width_col)
+    #let n_colbreaks_required = n_cols - n_current_col + 1
+    #text(1pt, luma(100%))[#n_colbreaks_required] // The function breaks without this. Seems like an anchor for the colbreaks somehow
+    #for _ in range(n_colbreaks_required){
+        colbreak()
+        // text[I am at page #{here().page()}]  // This reports the wrong page...
+    }
+  ]
+]
+
 #show: splendid-mdpi.template.with(
   title: [Homework 4: EDA with MIMIC and Chow-Liu Tree using Normal Variables],
   authors: (
@@ -27,7 +43,7 @@
     "Normal Distribution",
     "Estimation Distrubution Algorithm",
     "Chow-Liu Tree",
-    "MIMIC"
+    "MIMIC",
   ),
   venue: image("cimat.png", height: 1.8cm),
   publisher: [],
@@ -37,7 +53,7 @@
   abstract: [
     We test the MIMIC and Chow-Liu tree EDA's for normal variables on three
     functions: Sphere, Ackley and Griewank. In particular, the mutual information
-    of two normal random variables is given by $-1/2 log (1 - rho^2)$, where $rho$  
+    of two normal random variables is given by $-1/2 log (1 - rho^2)$, where $rho$
     is the Pearson correlation coefficient.
   ],
   details: none,
@@ -84,14 +100,14 @@ information between adjacent variables.
   supplement: [Algorithm],
 
   pseudocode-list(booktabs: true, numbered-title: [MIMIC])[
-    + $X :=$ Random initial population of size $N$
+    + $X :=$ Random initial population of size $N$ from uniform distribution
     + Evaluate fitness $f(x)$ for all $x in X$
     + *while* not converged *do*
       + $theta_t :=$ Fitness threshold for top $theta$-percentile
       + $E := {x in X mid(|) f(x) >= theta_t}$ (Elite subset)
       + Compute marginal $H(X_i)$ and conditional $H(X_i | X_j)$ entropies for all pairs in $E$
       + Find permutation $pi$ to minimize total conditional entropy: $H(X_(pi(1))) + sum_(i=1)^(n-1) H(X_(pi(i+1)) | X_(pi(i)))$
-      + $X :=$ Sample $N$ new candidates from this dependency chain
+      + $X :=$ Sample $N - 1$ new candidates from this dependency chain using a normal distribution
       + Evaluate fitness $f(x)$ for all new $x in X$
     + *end*
     + *return* Best candidate $x^ast in X$
@@ -105,56 +121,32 @@ the minimization problem. That is, we know that the covariance matrix
 $
   Sigma = mat(Var(X_1), Cov(X_1, X_2); Cov(X_2, X_1), Var(X_2))
 $
-and that $rho = Cov(X_1, X_2)/(sigma_1 sigma_2)$, so $Cov(X_1,X_2) = rho sigma_1 sigma_2$, and we may write the covariance matrix as
+and that $rho = Cov(X_1, X_2)/(sigma_1 sigma_2)$, so $Cov(X_1, X_2) = rho sigma_1 sigma_2$, and we may write the covariance matrix as
 $
   Sigma = mat(sigma_2^1, rho sigma_1 sigma_2; rho sigma_1 sigma_2, rho_2^2).
-$ 
+$
 Since the conditional distribution of two normal variables is once again
 normal, the conditional variance becomes, using Schur's complement,
 $
-  Var(X_1|X_2=x_2) &= Sigma_(11) - Sigma_(12) Sigma_(22)^(-1) Sigma_(21)\
-  &= sigma_1^2 - (rho sigma_1 sigma_2) (1/(sigma_2^2))(rho sigma_1 sigma_2)\
-  &= sigma_1^2 (1 - rho^2)
+  Var(X_1|X_2=x_2) & = Sigma_(11) - Sigma_(12) Sigma_(22)^(-1) Sigma_(21) \
+                   & = sigma_1^2 - (rho sigma_1 sigma_2) (1/(sigma_2^2))(rho sigma_1 sigma_2) \
+                   & = sigma_1^2 (1 - rho^2)
 $
 Therefore, since the differential entropy of a normal variable is
 $
   H(X) = 1/2 log (2 pi e sigma^2),
-$ 
+$
 we have
 $
-H(X_i | X_p) &= 1/2 log (2 pi e sigma^2_(i|p))\
-&= 1/2 log (2 pi e sigma_i^2(1 - rho^2)).
-$ 
+  H(X_i | X_p) & = 1/2 log (2 pi e sigma^2_(i|p)) \
+               & = 1/2 log (2 pi e sigma_i^2(1 - rho^2)).
+$
 Since $log$ is strictly increasing, it suffices to minimize $sigma_i^2
 (1-rho^2)$.
 
-#figure(
-  kind: "algorithm",
-  supplement: [Algorithm],
+Moreover, we will be taking the top 50 percentile of the individuals for our
+elitism conditions.
 
-  pseudocode-list(booktabs: true, numbered-title: [Simplified MIMIC])[
-    + $X :=$ Random initial population of size $N$
-    + Compute marginal $H(X_i)$ and conditional $H(X_i | X_j)$ entropies for all pairs.
-    + Find permutation $pi$ to minimize total conditional entropy: $H(X_(pi(1))) + sum_(i=1)^(n-1) H(X_(pi(i+1)) | X_(pi(i)))$
-    + *return* $pi$
-  ],
-)
-
-#figure(
-  diagram(
-    node-stroke: .1em,
-    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
-    spacing: 4em,
-    node((0, 0), $x_1$, radius: 1.5em),
-    edge("-|>"),
-    node((1, 0), $x_3$, radius: 1.5em),
-    edge("-|>"),
-    node((2, 0), $x_2$, radius: 1.5em),
-    edge("-|>"),
-    node((3, 0), $x_4$, radius: 1.5em),
-  ),
-  caption: [Example of a first-order dependency chain.],
-)
 == Dependency Tree
 This model is similar to MIMIC in their goal of maximizing mutual information
 (or minimize entropy). However, dependency tree does not restrict the number of
@@ -178,353 +170,171 @@ we do not consider elitism. It was first presented in @ChowLiu.
     + *return* pointer to $R$ (root of tree)
   ],
 )
+In this case, we know that the mutual information is given by $-1/2
+log(1-rho^2)$. However, we also note that $abs(rho)$ has behaves the same way
+as the mutual information, in the sense that $abs(rho)$ is increasing in the
+same region, and decreasing in the same region. Therefore, the weights
+of the Chow-Liu tree are set to $abs(rho)$.
 
 = Experiment Setup
 == Experiment 1
-We will use MIMIC to find the minimum of
+We will use both MIMIC and Chow-Liu tree to minimize the function
 $
   f(x) = sum_(i = 1)^d x_i^2
-$ 
-for $d = 10$. We will run the model 10 times, with a different seed per execution.
+$
+for $d = 10$. We will run both models 10 times, with a different seed per execution.
+
+== Experiment 2
+With both models, we minimize the function
+$
+  f(x) = sum_(i=1)^d (x_i^2)/4000 - product_(i=1)^d cos (x_i/sqrt(i)) + 1
+$
+for $d = 10$. We will run the models 10 times, with a different seed per execution.
+
+== Experiment 3
+With both models, we minimize the function
+$
+  f(x) = -a exp(-b sqrt(1/d sum_(i = 1)^d x_i^2)) -exp(1/d sum_(i=1)^d cos(c x_i)) + a + exp(1)
+$
+for $d = 10$. We will run the models 10 times, with a different seed per execution.
+
+#v(5cm)
+
+= Results
+For 500 individuals, we obtained the following results:
+
+== Sphere Function
+#figure(
+  table(
+    columns: 7,
+    stroke: none,
+    table.hline(),
+    table.header(
+      [*Algorithm*], table.vline(), [*Best*], [*Worst*], [*Mean*], [*Median*], [*Std Dev*], [*Avg. Generations*]
+    ),
+    table.hline(),
+    [Chow Liu], [1.2681e-10], [2.33347e-10], [1.67156e-10], [1.46955e-10], [4.18298e-11], [57],
+    [MIMIC], [1.03311e-08], [2.20328e-08], [1.49581e-08], [1.39092e-08], [3.84446e-09], [58],
+    table.hline(),
+  ),
+  caption: [Statistics for the sphere function on both models, for 500 individuals.],
+)
+
+Since we know that the variables have no dependencies, we do not present a graph of the resulting tree or chain, as we do not
+expect any pattern to arise.
+
+== Griewank Function
+Since this function 
+#figure(
+  table(
+    columns: 7,
+    stroke: none,
+    table.hline(),
+    table.header(
+      [*Algorithm*], table.vline(), [*Best*], [*Worst*], [*Mean*], [*Median*], [*Std Dev*], [*Avg. Generations*]
+    ),
+    table.hline(),
+    [Chow Liu], [3.56959e-12], [1.43332e-11], [9.82802e-12], [1.04839e-11], [3.71945e-12], [76],
+    [MIMIC], [7.0552e-10], [1.38498e-09], [9.92723e-10], [9.98306e-10], [2.25661e-10], [76],
+    table.hline(),
+  ),
+  caption: [Statistics for the Griewank function on both models, for 500 individuals.],
+)
 
 #figure(
   diagram(
     node-stroke: .1em,
     node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
     spacing: 4em,
-    node((0, 0), $x_1$, radius: 1.5em),
+    node((0, 0), $x_7$, radius: 1.5em),
+
+    edge((0, 0), (1, 1), "-|>"),
+    edge((0, 0), (-1, 1), "-|>"),
+    edge((0, 0), (0, 1), "-|>"),
+
+    node((-1, 1), $x_4$, radius: 1.5em),
+    node((0, 1), $x_6$, radius: 1.5em),
+    node((1, 1), $x_8$, radius: 1.5em),
+
+    edge((-1, 1), (-1, 2), "-|>"),
+    edge((-1, 2), (-1, 3), "-|>"),
+
+    node((-1, 2), $x_9$, radius: 1.5em),
+    node((-1, 3), $x_3$, radius: 1.5em),
+
+    edge((0, 1), (0, 2), "-|>"),
+    edge((0, 2), (0, 3), "-|>"),
+
+    node((0, 2), $x_(10)$, radius: 1.5em),
+    node((0, 3), $x_5$, radius: 1.5em),
+
+    edge((1, 1), (1, 2), "-|>"),
+    edge((1, 2), (1, 3), "-|>"),
+
+    node((1, 2), $x_(1)$, radius: 1.5em),
+    node((1, 3), $x_2$, radius: 1.5em),
+  ),
+  caption: [One of the trees generated by the Chow-Liu algorithm for the Griewank function.],
+)
+
+== Ackley Function
+#figure(
+  table(
+    columns: 7,
+    stroke: none,
+    table.hline(),
+    table.header(
+      [*Algorithm*], table.vline(), [*Best*], [*Worst*], [*Mean*], [*Median*], [*Std Dev*], [*Avg.Generations*]
+    ),
+    table.hline(),
+    [Chow Liu], [1.23935e-05], [1.83167e-05], [1.55985e-05], [1.57233e-05], [1.80581e-06], [47],
+    [MIMIC], [0.000116792], [0.000195041], [0.000164091], [0.000166689], [2.51503e-05], [48],
+    table.hline(),
+  ),
+  caption: [Statistics for the Ackley function on both models, for 500 individuals.],
+)
+
+#figure(
+  diagram(
+    node-stroke: .1em,
+    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
+    spacing: 4em,
+    node((0, 0), $x_8$, radius: 1.5em),
 
     edge((0, 0), (1, 1), "-|>"),
     edge((0, 0), (-1, 1), "-|>"),
 
-    node((-1, 1), $x_2$, radius: 1.5em),
-    node((1, 1), $x_4$, radius: 1.5em),
+    node((-1, 1), $x_6$, radius: 1.5em),
+    node((1, 1), $x_7$, radius: 1.5em),
 
     edge((-1, 1), (-1.5, 2), "-|>"),
     edge((-1, 1), (-0.5, 2), "-|>"),
 
-    node((-0.5, 2), $x_5$, radius: 1.5em),
-    node((-1.5, 2), $x_6$, radius: 1.5em),
+    node((-0.5, 2), $x_4$, radius: 1.5em),
+
+    edge((-0.25, 3), (-0.5, 2), "<|-"),
+
+    node((-0.25, 3), $x_9$, radius: 1.5em),
+
+    node((-1.5, 2), $x_5$, radius: 1.5em),
 
     edge((-1.5, 2), (-1.75, 3), "-|>"),
 
-    node((-1.75, 3), $x_3$, radius: 1.5em),
+    node((-1.75, 3), $x_2$, radius: 1.5em),
+    edge((-1.75, 3), (-1.75, 4), "-|>"),
+    node((-1.75, 4), $x_(10)$, radius: 1.5em),
+    edge((-1.75, 4), (-1.75, 5), "-|>"),
+    node((-1.75, 5), $x_1$, radius: 1.5em),
+    edge((-1.75, 5), (-1.75, 6), "-|>"),
+    node((-1.75, 6), $x_3$, radius: 1.5em),
   ),
-  caption: [Dependency tree generated by DB2. Its joint probability is given by $P(X) = P(X_1)P(X_2|X_1)P(X_4|X_1)P(X_6|X_2)P(X_5|X_2)P(X_3|X_6)$ ],
+  caption: [One of the trees generated by the Chow-Liu algorithm for the Ackley function.],
 )
-
-= Results
-
-== Independent Variables (Model 1)
-
-=== Maximum Likelihood Estimation
-For this model, since we do not have dependencies, we only need to observe the marginal probabilities.
-For an execution with a database size of 30,000 we obtained the following probabilities, which also
-correspond to the maximum likelihood estimation.
-#grid(
-  columns: 2,
-  figure(
-    table(
-      columns: 2,
-
-      stroke: none,
-      align: center + horizon,
-      fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-      table.hline(),
-      table.header([Bit], [Probability]),
-      table.hline(),
-      $P(X_1 = 1)$, $0.20198$,
-      $P(X_2 = 1)$, $0.79633$,
-      $P(X_3 = 1)$, $0.20297$,
-      $P(X_4 = 1)$, $0.37415$,
-      $P(X_5 = 1)$, $0.58213$,
-      $P(X_6 = 1)$, $0.62222$,
-      table.hline(),
-    ),
-    caption: [Values for Database 1.],
-  ),
-
-  figure(
-    table(
-      columns: 2,
-
-      align: center + horizon,
-      fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-      stroke: none,
-      table.hline(),
-      table.header([Bit], [Probability]),
-      table.hline(),
-      $P(X_1 = 1)$, $0.2023$,
-      $P(X_2 = 1)$, $0.79675$,
-      $P(X_3 = 1)$, $0.22539$,
-      $P(X_4 = 1)$, $0.37619$,
-      $P(X_5 = 1)$, $0.48014$,
-      $P(X_6 = 1)$, $0.72331$,
-      table.hline(),
-    ),
-    caption: [Values for Database 2.],
-  ),
-)
-
-
-Despite having identical probabilities a priori, the values are different, as
-we used the same number generator to first generate DB1, then DB2, without
-resetting it. This is the case throughout the whole program; we only use 1
-instance of `std::mt19937`.
-
-=== Kullback-Leibler Divergence
-We obtained $D_("KL")(M_1 || "DB1") = 0.587202$, and
-$D_("KL")(M_1 || "DB2") = 0.587202$.
-
-
-== MIMIC (Model 2)
-=== Resulting Chain
-We produced the chain
-#figure(
-  diagram(
-    node-stroke: .1em,
-    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
-    spacing: 4em,
-    node((0, 0), $x_1$, radius: 1.5em),
-    edge("-|>"),
-    node((1, 0), $x_2$, radius: 1.5em),
-    edge("-|>"),
-    node((2, 0), $x_3$, radius: 1.5em),
-    edge("-|>"),
-    node((3, 0), $x_4$, radius: 1.5em),
-    edge("-|>"),
-    node((4, 0), $x_5$, radius: 1.5em),
-    edge("-|>"),
-    node((5, 0), $x_6$, radius: 1.5em),
-  ),
-  caption: [Chain generated by MIMIC for DB1.],
-)
-Which corresponds to the original model used to generate the database. Note
-that sometimes (rarely, maybe $p < 0.05$), we obtain slightly different chains. This is due
-to the randomness of the generation, which can cause some weakly dependent
-nodes to lose their original pairing.
-
-// 1 -> 2 -> 6 -> 3 -> 4 -> 5
-For database 2, the following chain was generated.
-#figure(
-  diagram(
-    node-stroke: .1em,
-    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
-    spacing: 4em,
-    node((0, 0), $x_1$, radius: 1.5em),
-    edge("-|>"),
-    node((1, 0), $x_2$, radius: 1.5em),
-    edge("-|>"),
-    node((2, 0), $x_6$, radius: 1.5em),
-    edge("-|>"),
-    node((3, 0), $x_3$, radius: 1.5em),
-    edge("-|>"),
-    node((4, 0), $x_4$, radius: 1.5em),
-    edge("-|>"),
-    node((5, 0), $x_5$, radius: 1.5em),
-  ),
-  caption: [Chain generated by MIMIC for DB2.],
-)
-It was expected to not even be close to the true nature of the database, as it was
-originally a tree, so we cannot expect a simple chain to approximate it well.
-
-=== Maximum Likelihood Estimation
-The produced joint probability values are presented in the following tables.
-#grid(
-  columns: 2,
-  figure(
-    table(
-      columns: 2,
-      stroke: none,
-      align: center + horizon,
-      fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-      table.hline(),
-      table.header([Bit], [Probability]),
-      table.hline(),
-      $P(x_1 = 1)$, $0.20198$,
-      $P(x_2 = 1 | x_1 = 0)$, $0.92123$,
-      $P(x_2 = 1 | x_1 = 1)$, $0.302852$,
-      $P(x_3 = 1 | x_2 = 0)$, $0.419158$,
-      $P(x_3 = 1 | x_2 = 1)$, $0.147677$,
-      $P(x_4 = 1 | x_3 = 0)$, $0.277769$,
-      $P(x_4 = 1 | x_3 = 1)$, $0.752624$,
-      $P(x_5 = 1 | x_4 = 0)$, $0.672158$,
-      $P(x_5 = 1 | x_4 = 1)$, $0.431538$,
-      $P(x_6 = 1 | x_5 = 0)$, $0.348194$,
-      $P(x_6 = 1 | x_5 = 1)$, $0.818924$,
-      table.hline(),
-    ),
-    caption: [Probability tables by MIMIC for DB1.],
-  ),
-
-  figure(
-    table(
-      columns: 2,
-      stroke: none,
-      align: center + horizon,
-      fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-      table.hline(),
-      table.header([Bit], [Probability]),
-      table.hline(),
-      $P(x_1 = 1)$, $0.2023$,
-      $P(x_2 = 1 | x_1 = 0)$, $0.920133$,
-      $P(x_2 = 1 | x_1 = 1)$, $0.310232$,
-      $P(x_6 = 1 | x_2 = 0)$, $0.3477$,
-      $P(x_6 = 1 | x_2 = 1)$, $0.819128$,
-      $P(x_3 = 1 | x_6 = 0)$, $0.419567$,
-      $P(x_3 = 1 | x_6 = 1)$, $0.151111$,
-      $P(x_4 = 1 | x_3 = 0)$, $0.36643$,
-      $P(x_4 = 1 | x_3 = 1)$, $0.409734$,
-      $P(x_5 = 1 | x_4 = 0)$, $0.461791$,
-      $P(x_5 = 1 | x_4 = 1)$, $0.510566$,
-      table.hline(),
-    ),
-    caption: [Probability tables by MIMIC for DB2.],
-  ),
-)
-
-=== KL-Divergence
-We obtained $D_("KL")(M_2 || "DB1") = 0.000453911$, and
-$D_("KL")(M_2 || "DB2") = 0.587202$.
-
-== Chow-Liu Tree (Model 3)
-=== Tree Generated
-#figure(
-  diagram(
-    node-stroke: .1em,
-    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
-    spacing: 4em,
-
-    // Root node
-    node((0, 0), $x_5$, radius: 1.5em),
-
-    // Edges from root (x5 -> x4, x5 -> x6)
-    edge((0, 0), (-1, 1), "-|>"),
-    edge((0, 0), (1, 1), "-|>"),
-
-    // Level 1 nodes
-    node((-1, 1), $x_4$, radius: 1.5em),
-    node((1, 1), $x_6$, radius: 1.5em),
-
-    // Edge x4 -> x3
-    edge((-1, 1), (-1, 2), "-|>"),
-
-    // Level 2 node
-    node((-1, 2), $x_3$, radius: 1.5em),
-
-    // Edge x3 -> x2
-    edge((-1, 2), (-1, 3), "-|>"),
-
-    // Level 3 node
-    node((-1, 3), $x_2$, radius: 1.5em),
-
-    // Edge x2 -> x1
-    edge((-1, 3), (-1, 4), "-|>"),
-
-    // Level 4 node
-    node((-1, 4), $x_1$, radius: 1.5em),
-  ),
-  caption: [Dependency tree generated by the Chow-Liu Algorithm for DB1.],
-)
-We observe that although it is not exactly the chain the database came from, this is expected,
-as taking an arbitrary root node leads to this. We can observe that if we instead take node 1
-as the root, it leads to the original chain (by reversing the edges).
-
-#figure(
-  diagram(
-    node-stroke: .1em,
-    node-fill: gradient.radial(white.lighten(80%), gray.lighten(40%), center: (20%, 20%), radius: 20%),
-    spacing: 4em,
-
-    // Root node
-    node((0, 0), $x_1$, radius: 1.5em),
-
-    // Edges from root (x1 -> x2, x1 -> x4)
-    edge((0, 0), (-1, 1), "-|>"),
-    edge((0, 0), (1, 1), "-|>"),
-
-    // Level 1 nodes
-    node((-1, 1), $x_2$, radius: 1.5em),
-    node((1, 1), $x_4$, radius: 1.5em),
-
-    // Edges from x2 (x2 -> x5, x2 -> x6)
-    edge((-1, 1), (-2, 2), "-|>"),
-    edge((-1, 1), (0, 2), "-|>"),
-
-    // Level 2 nodes
-    node((-2, 2), $x_5$, radius: 1.5em),
-    node((0, 2), $x_6$, radius: 1.5em),
-
-    // Edge from x6 -> x3
-    edge((0, 2), (0, 3), "-|>"),
-
-    // Level 3 node
-    node((0, 3), $x_3$, radius: 1.5em),
-  ),
-  caption: [Dependency tree generated by the Chow-Liu Algorithm for DB2.],
-)
-This tree is verbatim to the original tree. Since it is random, it is also
-possible to obtain other permutations of the tree, where the root may not be
-node 1. However, the joint probability stays the same.
-
-=== Maximum Likelihood Estimate
-#figure(
-  table(
-    columns: 4,
-    align: center + horizon,
-    fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-    stroke: none,
-    table.hline(),
-    table.header(
-      [*Variable* ($X_i$)], [*Parent* ($X_"parent"$)], [$P(X_i=1 | X_"parent"=0)$], [$P(X_i=1 | X_"parent"=1)$]
-    ),
-    table.hline(stroke: .5pt),
-    $x_5$, [None], [--], [0.58213],
-    $x_4$, $x_5$, [0.508986], [0.277361],
-    $x_3$, $x_4$, [0.0802269], [0.408285],
-    $x_2$, $x_3$, [0.851574], [0.579396],
-    $x_1$, $x_2$, [0.691363], [0.0768149],
-    $x_6$, $x_5$, [0.348194], [0.818924],
-    table.hline(),
-  ),
-  caption: [Conditional probabilities for the second database DB1 generated by the Chow-Liu tree.],
-)
-
-#figure(
-  table(
-    columns: 4,
-    align: center + horizon,
-    fill: (x, y) => if calc.odd(y) { luma(200) } else { white },
-    stroke: none,
-    table.hline(),
-    table.header(
-      [*Variable* ($X_i$)], [*Parent* ($X_"parent"$)], [$P(X_i=1 | X_"parent"=0)$], [$P(X_i=1 | X_"parent"=1)$]
-    ),
-    table.hline(stroke: .5pt),
-    $x_1$, [None], [--], [0.2023],
-    $x_2$, $x_1$, [0.920133], [0.310232],
-    $x_5$, $x_2$, [0.672226], [0.431139],
-    $x_6$, $x_2$, [0.3477], [0.819128],
-    $x_3$, $x_6$, [0.419567], [0.151111],
-    $x_4$, $x_1$, [0.280343], [0.754128],
-    table.hline(),
-  ),
-  caption: [Conditional probabilities for the second database DB2 generated by the Chow-Liu tree.],
-)
-
-=== KL-Divergence
-We obtained $D_("KL")(M_3 || "DB1") = 0.000453911$, and
-$D_("KL")(M_3 || "DB2") = 0.000399334$.
 
 = Conclusions
-We may conclude that Chow-Liu tree produces the best results for both databases in general. In particular, it does not suffer
-the 1-dimensionality problem of the MIMIC model, which only allows for 1 child node. The independent nodes model is extremely simple,
-but it does not capture the true nature of the databases, since it completely ignores the joint probabilities.
-
-= Ideas
-One possible way of allowing the MIMIC model to have greater versatility is to
-choose 1 root node, and allow only the root node to have various children. This
-keeps an almost linear model, but may allow leeway for some generalizations.
+We observe that the Chow-Liu algorithm reaches a better approximation of the
+true minimum of the objective function compared to the MIMIC model. Both models
+are able to get close to the global minimum. 
 
 = Appendix
 
@@ -550,12 +360,17 @@ make
 ```
 
 == Execution Instructions
-All the results are obtained from a single execution, all printed to `cout`. Once 
-all compilations are done, we do (while in the `build` directory)
+All the results are obtained from a single execution, all printed to `cout`. Once
+all compilations are done, we execute (while in the `build` directory):
 ```sh
-./src/main
+./src/main 500 10
 ```
-This will generate results for all 3 models, for both databases.
+The first argument is the population number, while the second is the number of
+executions per model and function.
+
+This will print the tables presented in previous sections. If you also want to
+see all the trees and chains it generated on all 10 runs, you must un-comment
+the lines `MIMIC.cpp:85` and `ChowLiu.cpp:107` and re-compile.
 
 
 #bibliography("refs.bib")

@@ -18,4 +18,3 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fsanitize=address,undefined ${COMMON_CXX_FLAG
 # set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 add_subdirectory(src)
-add_subdirectory(tests)

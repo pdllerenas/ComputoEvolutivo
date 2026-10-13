@@ -5,6 +5,7 @@
 #include "../include/Selection.h"
 #include "../include/Stats.h"
 #include "../include/Types.h"
+#include "../include/Utils.h"
 
 namespace MIMIC {
 
@@ -22,6 +23,7 @@ EDAResult EDA(const Objective &obj, size_t population_size,
   std::vector<std::vector<double>> correlations;
 
   Population elite;
+  std::vector<int> chain;
 
   for (; gen < max_generations; ++gen) {
     elite = SelectElite(population, population_size / 2);
@@ -29,14 +31,16 @@ EDAResult EDA(const Objective &obj, size_t population_size,
     ComputeMeanVarianceCorrelations(elite, means, variances, correlations);
 
     double max_var = *std::max_element(variances.begin(), variances.end());
+
+    std::vector<bool> used(d, false);
+
     if (max_var < 1e-8) {
       converged = true;
       break;
     }
 
-    std::vector<int> chain;
+    chain.clear();
     chain.reserve(d);
-    std::vector<bool> used(d, false);
 
     // Pick root
     auto iter = std::min_element(variances.begin(), variances.end());
@@ -78,6 +82,7 @@ EDAResult EDA(const Objective &obj, size_t population_size,
     GenerateChowLiuPopulation(population, elite, obj, dt, means, variances,
                               correlations, population_size, rng);
   }
+  // PrintChain(chain);
   return {
       std::vector<double>(elite.all_genes.begin(), elite.all_genes.begin() + d),
       elite.all_fitnesses[0], gen, converged};

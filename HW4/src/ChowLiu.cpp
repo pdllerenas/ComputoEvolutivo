@@ -2,6 +2,7 @@
 #include <random>
 #include <vector>
 
+#include "../include/Utils.h"
 #include "../include/ChowLiu.h"
 #include "../include/Generator.h"
 #include "../include/Selection.h"
@@ -14,8 +15,9 @@ Graph BuildChowLiuGraph(const std::vector<std::vector<double>> &correlations) {
   Graph g(d, d * (d - 1) / 2);
   for (size_t i = 0; i < d; ++i) {
     for (size_t j = i + 1; j < d; ++j) {
-      int offset = ((i * d) + j) * 4;
-      // I(X,Y) = -1/2 log (1-rho^2)
+      // I(X;Y) = -1/2 log (1-rho^2), but we know that it suffices to use |rho|,
+			// as I(X;Y) is decreasing for -1 <= rho <= 0, increasing for 0 <= rho <= 1
+			// the same behavior of |rho|. We also avoid the problem of evaluating log at 0.
       double mutual_info = std::abs(correlations[i][j]);
       g.addEdge(i, j, mutual_info);
     }
@@ -81,6 +83,7 @@ EDAResult EDA(const Objective &obj, size_t population_size,
   std::vector<std::vector<double>> correlations;
 
   Population elite;
+	DirectedTree dt;
 
   for (; gen < max_generations; ++gen) {
     elite = SelectElite(population, population_size / 2);
@@ -88,12 +91,12 @@ EDAResult EDA(const Objective &obj, size_t population_size,
     ComputeMeanVarianceCorrelations(elite, means, variances, correlations);
     // check if the maximum variance across all dimensions is close to 0
     double max_var = *std::max_element(variances.begin(), variances.end());
-    if (max_var < 1e-10) {
+    if (max_var < 1e-8) {
       converged = true;
       break;
     }
     Graph g = BuildChowLiuGraph(correlations);
-    DirectedTree dt = BuildDirectedTree(g, rng);
+    dt = BuildDirectedTree(g, rng);
 
     // this function replaces population genes and fitnesses, keeping its other
     // attributes intact. Thus, the population variable comes back as
@@ -101,6 +104,7 @@ EDAResult EDA(const Objective &obj, size_t population_size,
     GenerateChowLiuPopulation(population, elite, obj, dt, means, variances,
                               correlations, population_size, rng);
   }
+	// VisualizeTree(dt, means, variances, correlations);
   return {
       std::vector<double>(elite.all_genes.begin(), elite.all_genes.begin() + d),
       elite.all_fitnesses[0], gen, converged};
