@@ -1,10 +1,11 @@
 #pragma once
 
 #include <algorithm>
+#include <utility>
 #include <limits>
+#include <mpi.h>
 #include <random>
 #include <vector>
-#include <mpi.h>
 
 #include "../operators/Crossover.hpp"
 #include "../operators/Mutation.hpp"
@@ -26,7 +27,8 @@ public:
   // GetLowerBound()
   // GetUpperBound()
   template <typename Evaluator>
-  std::vector<T> Minimize(const Evaluator &evaluator, std::mt19937 &rng, double global_start_time, double timeout_seconds) {
+  std::pair<std::vector<T>, std::vector<double>> Minimize(const Evaluator &evaluator, std::mt19937 &rng,
+                          double global_start_time, double timeout_seconds) {
     size_t pop_size = grid.GetPopulationSize();
     size_t d = grid.GetGeneSize();
 
@@ -35,6 +37,9 @@ public:
 
     std::vector<T> best_individual(d);
     double best_fitness = std::numeric_limits<double>::infinity();
+
+    std::vector<double> convergence_history;
+    convergence_history.reserve(max_generations);
 
     for (size_t i = 0; i < pop_size; ++i) {
       std::vector<T> current_genes(grid.GetReadGenesBegin(i),
@@ -56,14 +61,16 @@ public:
           size_t west_idx = grid.GetWestNeighbor(i);
           size_t east_idx = grid.GetEastNeighbor(i);
 
-          size_t partner = EastWestSelection<T>(i, west_idx, east_idx, grid, rng);
+          size_t partner =
+              EastWestSelection<T>(i, west_idx, east_idx, grid, rng);
 
           auto mother_iterator = grid.GetReadGenesBegin(i);
           auto father_iterator = grid.GetReadGenesBegin(partner);
 
           std::vector<T> child = BoundedDiscreteCrossover(
               mother_iterator, father_iterator, d, rng);
-          UniformMutation(child, 0.1, lower_bound, upper_bound, rng);
+					double mutation_rate = 1.0 / d;
+          UniformMutation(child, mutation_rate, lower_bound, upper_bound, rng);
 
           double child_fitness = evaluator.Evaluate(child);
           double mother_fitness = grid.GetReadFitness(i);
@@ -82,14 +89,15 @@ public:
             grid.SetWriteIndividual(i, mother_iterator, mother_fitness);
           }
         }
-        grid.FlushKBlocks(start_idx, block_end - start_idx);
+        grid.FlushKBlocks(start_idx, k);
       }
-			if (gen % 20 == 0) {
-				if (MPI_Wtime() - global_start_time > timeout_seconds) {
-					break;
-				}
-			}
+      convergence_history.push_back(best_fitness);
+      if (gen % 20 == 0) {
+        if (MPI_Wtime() - global_start_time > timeout_seconds) {
+          break;
+        }
+      }
     }
-    return best_individual;
+    return {best_individual, convergence_history};
   }
 };

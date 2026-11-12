@@ -70,7 +70,8 @@ public:
   }
 
   void FlushKBlocks(size_t start_idx, size_t k) {
-    size_t buf_size = k * read_buffer.GetGeneSize();
+		size_t real_k = std::min(k, pop_size - start_idx);
+    size_t buf_size = real_k * read_buffer.GetGeneSize();
 
     // Get memory blocks
     auto source_begin = write_buffer.GetGenesBegin(start_idx);

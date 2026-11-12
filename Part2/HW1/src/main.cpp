@@ -1,9 +1,11 @@
 #include <algorithm>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <mpi.h>
 #include <numeric>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "../include/evolution/Grid1D.hpp"
@@ -17,6 +19,17 @@ int main(int argc, char *argv[]) {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  std::string filename = "kfls_results_rank_" + std::to_string(rank) + ".csv";
+  std::ofstream outfile(filename);
+  outfile << "k,run_id,penalty\n"; // CSV Header
+  outfile.close();
+
+  std::string conv_filename =
+      "convergence_rank_" + std::to_string(rank) + ".csv";
+  std::ofstream conv_file(conv_filename);
+  conv_file << "k,run_id,generation,best_penalty\n"; // Header
+  conv_file.close();
 
   if (argc != 4) {
     std::cerr << "Invalid Argument Count.\nUsage: " << argv[0]
@@ -50,7 +63,8 @@ int main(int argc, char *argv[]) {
       rank * chunk_size + std::min(static_cast<size_t>(rank), remainder) + 1;
   size_t end_k = start_k + chunk_size + (rank < remainder ? 1 : 0) - 1;
 
-  FrequencyAssignmentEvaluator evaluator(0, 9, graph.interference_edges);
+  // Safe upper bound is d (number of nodes), without any pre-computing
+  FrequencyAssignmentEvaluator evaluator(0, d, graph.interference_edges);
 
   std::vector<double> local_k_means(end_k - start_k + 1);
   std::vector<int> local_k_values(end_k - start_k + 1);
@@ -60,6 +74,7 @@ int main(int argc, char *argv[]) {
     local_k_values[local_idx] = k;
 
     std::vector<double> run_penalties(NUM_RUNS);
+    std::vector<std::vector<double>> run_convergences(NUM_RUNS);
 
 #pragma omp parallel for schedule(dynamic)
     for (int run = 0; run < NUM_RUNS; ++run) {
@@ -72,10 +87,26 @@ int main(int argc, char *argv[]) {
                             evaluator.GetUpperBound(), rng);
       KFLS<int> local_sweeper(local_grid, k, max_generations);
 
-      std::vector<int> best_genes =
+      auto [best_genes, history] =
           local_sweeper.Minimize(evaluator, rng, run_start_time, 300.0);
       run_penalties[run] = evaluator.Evaluate(best_genes);
+      run_convergences[run] = std::move(history);
     }
+
+    std::ofstream append_file(filename, std::ios_base::app);
+    for (int run = 0; run < NUM_RUNS; ++run) {
+      append_file << k << "," << run << "," << run_penalties[run] << "\n";
+    }
+    append_file.close();
+
+    std::ofstream append_conv(conv_filename, std::ios_base::app);
+    for (int run = 0; run < NUM_RUNS; ++run) {
+      for (size_t gen = 0; gen < run_convergences[run].size(); ++gen) {
+        append_conv << k << "," << run << "," << gen << ","
+                    << run_convergences[run][gen] << "\n";
+      }
+    }
+    append_conv.close();
 
     double sum =
         std::accumulate(run_penalties.begin(), run_penalties.end(), 0.0);
