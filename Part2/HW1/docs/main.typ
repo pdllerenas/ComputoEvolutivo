@@ -13,12 +13,14 @@
       organization: [Centro de Investigación en Matemáticas],
       location: [Guanajuato, Guanajuato, MX],
       email: "pedro.llerenas@cimat.mx",
-      url: "",
+      url: "https://github.com/pdllerenas/ComputoEvolutivo/tree/main/Part2/HW1"
     ),
   ),
   abstract: [This paper aims to solve the Frequency Assignment Problem (FAP)
     through a cellular algorithm, namely, k-Fixed Line Sweep (kFLS)
-    . We observe the effect of $k$ over its whole range, and find that // TODO: explain
+    . We observe the effect of $k$ over its whole range, and find that for a
+    simplified version of the FAP, where distances are not considered, the
+    parameter $k$ does not provide a meaningful advantage over the others.
   ],
   bibliography: bibliography("refs.bib"),
 )
@@ -130,8 +132,7 @@ We will do experiments on graphs with unweighted edges. That is, no notion of
 distance will be present. This simplifies the problem.
 
 To swiftly obtain results, we used MPI to distribute the workload of various indices of
-$k$ (for which we execute 10 runs) to 10 distinct processors. We also use
-OpenMP to distribute the 10 runs into various threads. We made use of
+$k$ (for which we execute 10 runs) to 5 distinct processors. We made use of
 _CIMAT's Laboratorio de Supercomputo_.
 
 == Instances
@@ -165,6 +166,9 @@ estimate to accelerate convergence @Brooks_1941. Their idea involved counting
 the number of edges each node has, and obtain its maximum. This gives a tighter upper
 bound on the problem. We do no implement this approach.
 
+Moreover, we used 50 individuals, with a maximum of 2,000 generations, or 5
+minutes per run --- whichever came first.
+
 === Instance 1
 The first instance `fpsol2.i.1.col` has 496 nodes and 11654 edges. According to the
 file source page, the optimal color count is 65. That is, 65 distinct colors are needed to
@@ -172,8 +176,8 @@ solve the associated Graph Coloring Problem. In our case, we only aim to minimiz
 penalty function.
 
 #figure(
-  image("images/e1_kfls_combined_plot.png", width: 80%),
-  caption: [Solutions found for instance 1. No visible pattern is seen on $k$.],
+  image("images/e1_kfls_full_analysis.png", width: 100%),
+  caption: [Solutions found for instance 1. No visible pattern is seen on $k$. Convergence is rapid, which indicates diversity might need some tweaking.],
 )
 
 === Instance 2
@@ -181,8 +185,8 @@ The first instance `fpsol2.i.2.col` has 451 nodes and 8691 edges. According to t
 file source page, the optimal color count is 30.
 
 #figure(
-  image("images/e2_kfls_combined_plot.png", width: 80%),
-  caption: [Solutions found for instance 2. No visible pattern is seen on $k$.],
+  image("images/e2_kfls_full_analysis.png", width: 100%),
+  caption: [Solutions found for instance 2. No visible pattern is seen on $k$. Mean convergence is rapid. Most solutions approach a penalty of 100, meaning we are very close to the global minimum.],
 )
 
 === Instance 3
@@ -190,16 +194,28 @@ The first instance `fpsol2.i.3.col` has 425 nodes and 8688 edges. According to t
 file source page, the optimal color count is 30.
 
 #figure(
-  image("images/e3_kfls_combined_plot.png", width: 80%),
-  caption: [Solutions found for instance 3. No visible pattern is seen on $k$.],
+  image("images/e3_kfls_full_analysis.png", width: 100%),
+  caption: [Solutions found for instance 3. No visible pattern is seen on $k$. Mean convergence is rapid, and most solutions approach a penalty of 100. We are close to the global minimum.],
 )
-None of the instances show any dependence on $k$. Moreover, the solutions found
+None of the instances show any obvious dependence on $k$. Moreover, the solutions found
 for each $k$ have a high variance, essentially being separated in two groups.
 They either stay far away from the solution, or stay within a 600 penalty range.
 This could be due to the omission of the distance parameter as a whole, which
 might make the algorithm too stochastic; not entirely able to make good decisions.
 
+== Comparison to Other Results
+As mentioned in @Galinier1999, using a purely genetic algorithm is not competitive
+for this problem. In their work, a local search was used (memetic algorithm) of 
+length $L$. They found that $L$ has an effect in robustness and speed, but there
+is no single best $L$ for both qualities. This could somewhat be an analogous
+finding in our experiments, where $k$ does not seem to have a clear-cut best value.
+
 = Conclusions
+All 3 instances had no relationship between $k$ and the average solution. We
+argue that the exclusion of distance (essentially converting the problem into
+the Graph Coloring Problem) made our genetic algorithm too random in the sense
+that crossover, selection and mutation could not perform _informed_ decisions
+on the topology of the problem. In a future paper, we plan on including the
+full metrics used in the CALMA instances, where we might have a better
+result from our genetic operations.
 
-
-#lorem(40)
